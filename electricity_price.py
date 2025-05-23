@@ -3,30 +3,40 @@ from constant import colors, icon_size, icon_font, text_font
 
 # Device data
 price = [
-    41.73,
-    40.28,
-    35.40,
-    30.38,
-    30.84,
-    39.14,
-    43.84,
-    45.77,
-    36.50,
-    32.98,
-    23.02,
-    7.39,
-    4.56,
-    4.07,
-    3.35,
-    4.91,
-    9.42,
-    28.20,
-    43.08,
-    50.38,
-    40.46,
-    40.21,
-    39.54,
-    28.43,
+  41.73,
+  40.28,
+  35.40,
+  30.38,
+  30.84,
+  39.14,
+  43.84,
+  45.77,
+  36.50,
+  32.98,
+  23.02,
+  7.39,
+  4.56,
+  4.07,
+  3.35,
+  4.91,
+  9.42,
+  28.20,
+  43.08,
+  50.38,
+  40.46,
+  40.21,
+  39.54,
+  28.43,
+]
+
+consumption = [
+  2.42,
+  1.45,
+  2.15,
+  1.19,
+  1.23,
+  2.23,
+  2.12
 ]
 
 
@@ -79,12 +89,56 @@ def draw_price_chart(draw, pos, width, height):
                      fill=colors["black"])
 
 
+def draw_consumption_chart(draw, pos, width, height):
+    # Chart area dimensions
+    chart_width = width
+    chart_height = height
+
+    # Calculate scaling factors
+    max_consumption = max(consumption)
+    y_scaling = chart_height / max_consumption if max_consumption > 0 else 1
+
+    # Calculate bar width based on available space and number of bars
+    bar_width = int(chart_width / len(consumption)) - 4  # 4px gap between bars
+
+    # Draw axis labels with increased spacing (moved from -20 to -30)
+    draw.text((pos[0], pos[1] - 30), "Förbrukning (kWh)", font=text_font, fill=colors["black"])
+
+    # Draw some y-axis labels
+    y_labels = [max_consumption / 2, max_consumption]
+    for i, label in enumerate(y_labels):
+        y_pos = pos[1] + chart_height - (label * y_scaling)
+        draw.text((pos[0], y_pos - 6), f"{label:.1f}", font=text_font, fill=colors["black"])
+        draw.line([(pos[0] + 25, y_pos), (pos[0] + 30, y_pos)], fill=colors["black"], width=1)  # tick mark
+
+    # Draw the bars
+    for i, value in enumerate(consumption):
+        bar_height = value * y_scaling
+        x1 = pos[0] + 30 + i * (bar_width + 4)  # 4px gap
+        y1 = pos[1] + chart_height - bar_height
+        x2 = x1 + bar_width
+        y2 = pos[1] + chart_height
+
+        # Draw the bar
+        draw.rectangle([x1, y1, x2, y2], outline=colors["black"], fill=None, width=1)
+
+        # Optional: Draw day number underneath each bar
+        # draw.text((x1 + (bar_width / 2) - 4, y2 + 5), str(i+1), font=text_font, fill=colors["black"])
+
+
 def draw_electricity_price(draw, pos):
     draw.text((pos[0], pos[1]), "El pris", font=text_font, fill=colors["black"])
 
     # Draw the price chart below the title
-    chart_width = 240  # Adjust based on your display needs
-    chart_height = 100  # Adjust based on your display needs
-    chart_pos = (pos[0], pos[1] + 30)  # Position below the title
+    price_chart_width = 240
+    price_chart_height = 100
+    price_chart_pos = (pos[0], pos[1] + 30)
 
-    draw_price_chart(draw, chart_pos, chart_width, chart_height)
+    draw_price_chart(draw, price_chart_pos, price_chart_width, price_chart_height)
+
+    # Draw the consumption chart below the price chart
+    consumption_chart_width = 240
+    consumption_chart_height = 80
+    consumption_chart_pos = (pos[0], pos[1] + 30 + price_chart_height + 40)  # 40px gap between charts
+
+    draw_consumption_chart(draw, consumption_chart_pos, consumption_chart_width, consumption_chart_height)
