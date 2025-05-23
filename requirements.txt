@@ -1,1 +1,4 @@
+# filepath: /Users/oskar/Project/home-control-panel-eink/requirements.txt
 pillow==11.2.1
+# No external dependencies needed for the weather API
+# We're using only the standard library for network requests
