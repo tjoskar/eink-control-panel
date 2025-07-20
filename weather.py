@@ -12,7 +12,7 @@ def draw_weather(draw, pos):
   draw.text((pos[0], pos[1] + 16), current["icon"], font=big_icon_font, fill=colors["black"])
   draw.text((pos[0] + big_icon_size + 8 * 2, pos[1] + 16 + (big_icon_size - headline_text_size) / 2), current["temp"], font=headline_text_font, fill=colors["black"])
 
-  detail_pos = (pos[0] + big_icon_size + headline_text_size + 8 * 4, pos[1] + 8)
+  detail_pos = (pos[0] + big_icon_size + headline_text_size + 8 * 8, pos[1] + 8)
 
   # Current wind speed
   draw.text(detail_pos, "\uefd8", font=icon_font, fill=colors["black"])

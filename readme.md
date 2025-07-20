@@ -5,7 +5,7 @@ A dashboard for displaying various information on an E-Ink display, designed for
 ## Development
 Run the following command to automatically rebuild the image when code changes:
 ```
-ls *.py | entr -r python3 to-image.py
+\ls *.py | entr -r python3 to-image.py
 ```
 
 ## Weather API Integration

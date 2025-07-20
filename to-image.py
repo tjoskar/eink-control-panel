@@ -13,10 +13,10 @@ draw = ImageDraw.Draw(image)
 padding = 16
 
 draw_device_icons(draw, (padding, padding))
-draw_weather(draw, (padding + 36*3, padding))
+draw_weather(draw, (padding + 36*2, padding))
 draw_electricity_price(draw, (padding + 500, padding))
 # Draw weekly dishes below the weather section
-draw_weekly_dishes(draw, (padding + 36*3, padding + 270))
+draw_weekly_dishes(draw, (padding + 36*2, padding + 270))
 # Draw garbage collection reminders below the electricity charts
 draw_garbage_collection(draw, (padding + 500, padding + 280))
 

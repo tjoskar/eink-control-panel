@@ -19,6 +19,7 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weather_c
 
 # Weather icons mapping from OpenWeatherMap codes to icon font characters
 # This mapping may need to be adjusted based on the specific icons in your font
+# See https://openweathermap.org/weather-conditions
 WEATHER_ICONS = {
     # Clear
     "01d": "\uf157",  # Clear day
@@ -32,10 +33,10 @@ WEATHER_ICONS = {
     "04d": "\ue818",  # Broken clouds
     "04n": "\ue818",
     # Rain
-    "09d": "\ue798",  # Shower rain
-    "09n": "\ue798",
-    "10d": "\ue7d0",  # Rain day
-    "10n": "\ue7d0",  # Rain night
+    "09d": "\uf61f",  # Shower rain
+    "09n": "\uf61f",
+    "10d": "\uf176",  # Rain day
+    "10n": "\uf176",  # Rain night
     # Thunderstorm
     "11d": "\ue80f",  # Thunderstorm
     "11n": "\ue80f",
@@ -141,52 +142,50 @@ def get_fallback_data():
     }
 
 def get_uv_info(weather_data):
-    """Extract UV index information."""
-    current_uv = weather_data.get('current', {}).get('uvi', 0)
+    """Extract UV index information for current day only.
 
-    # Find max UV for the day
+    Format: <current UV index> (<max UV>, <start hour> - <end hour>)
+    If UV index never reaches 3, only show the current UV index.
+    """
+    current_uv = weather_data.get('current', {}).get('uvi', 0)
+    current_time = datetime.fromtimestamp(weather_data.get('current', {}).get('dt', 0))
+    current_date = current_time.date()
+
+    # Find max UV for the current day and hours where UV >= 3
     max_uv = current_uv
-    hours_above_3 = []
+    uv_hours = []
 
     hourly = weather_data.get('hourly', [])
-    for i, hour in enumerate(hourly):
+    for hour in hourly:
+        hour_time = datetime.fromtimestamp(hour.get('dt', 0))
+        hour_date = hour_time.date()
+
+        # Skip if not current day
+        if hour_date != current_date:
+            continue
+
         uv = hour.get('uvi', 0)
         if uv > max_uv:
             max_uv = uv
 
-        # Track hours where UV > 3 (moderate or higher)
-        if uv > 3:
-            hour_time = datetime.fromtimestamp(hour.get('dt', 0))
-            hours_above_3.append(hour_time.hour)
+        # Track hours and their UV index for the current day
+        uv_hours.append((hour_time.hour, uv))
 
-    # Format the hours with high UV into ranges
-    uv_ranges = []
-    if hours_above_3:
-        start = hours_above_3[0]
-        end = start
-
-        for i in range(1, len(hours_above_3)):
-            if hours_above_3[i] == end + 1:
-                end = hours_above_3[i]
-            else:
-                if start == end:
-                    uv_ranges.append(f"{start}")
-                else:
-                    uv_ranges.append(f"{start} - {end}")
-                start = hours_above_3[i]
-                end = start
-
-        # Add the last range
-        if start == end:
-            uv_ranges.append(f"{start}")
-        else:
-            uv_ranges.append(f"{start} - {end}")
+    # Find continuous range of hours where UV >= 3
+    high_uv_range = []
+    for hour, uv in uv_hours:
+        if uv >= 3:
+            high_uv_range.append(hour)
 
     # Format UV information
-    if not uv_ranges:
-        uv_text = f"{current_uv:.0f} ({max_uv:.0f})"
+    if not high_uv_range:
+        # If UV never reaches 3, just show the current index
+        uv_text = f"{current_uv:.0f}"
     else:
-        uv_text = f"{current_uv:.0f} ({max_uv:.0f}, {', '.join(uv_ranges)})"
+        # Format as "current UV (max UV, start hour - end hour)"
+        min_hour = min(high_uv_range)
+        max_hour = max(high_uv_range)
+        uv_text = f"{current_uv:.0f} ({max_uv:.0f}, {min_hour} - {max_hour})"
 
     return uv_text
 
@@ -214,7 +213,7 @@ def get_weather_display_data():
 
         # Daily forecast data
         forecast = []
-        for i, day in enumerate(weather_data.get('daily', [])[:5]):  # Get 5-day forecast
+        for i, day in enumerate(weather_data.get('daily', [])[1:6]):  # Get 5-day forecast
             day_dt = datetime.fromtimestamp(day.get('dt', 0))
             day_name = DAYS_OF_WEEK_SV.get(day_dt.weekday(), "")
 
