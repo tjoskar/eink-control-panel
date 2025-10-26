@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from constant import colors, icon_size, icon_font, text_font, text_size
+from gui_constant import colors, icon_size, icon_font, text_font, text_size
 
 # Fake weekly dishes data in Swedish
 # This could later be fetched from an external source

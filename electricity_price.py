@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from constant import colors, icon_size, icon_font, text_font
+from gui_constant import colors, icon_size, icon_font, text_font
 
 # Device data
 price = [

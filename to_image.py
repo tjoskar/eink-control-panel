@@ -1,7 +1,7 @@
 """Image output entrypoint.
 
 Uses shared composition in `compose_panel` so layout stays identical to
-hardware path (`to-disply.py`).
+hardware path (`to_disply.py`).
 """
 
 from compose import compose_panel

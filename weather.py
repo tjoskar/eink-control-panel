@@ -1,5 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from constant import colors, icon_size, icon_font, text_font, big_icon_font, big_icon_size, headline_text_font, headline_text_size, text_size
+from gui_constant import colors, icon_size, icon_font, text_font, big_icon_font, big_icon_size, headline_text_font, headline_text_size, text_size
 from weather_api import get_weather_display_data
 
 def draw_weather(draw, pos):

@@ -12,25 +12,32 @@
   - Hardware display: `to-disply.py` (Waveshare driver `lib/waveshare_epd/epd7in5_V2.py`).
 
 ## Key Files & Responsibilities
+## Key Files & Responsibilities
 - `compose.py`: Single source for panel layout; `compose_panel(devices)` returns a PIL Image with all sections drawn.
 - `to-image.py`: Thin wrapper calling `compose_panel` then saving `main.png`.
 - `to-disply.py`: Thin wrapper calling `compose_panel` then pushing to Waveshare EPD (clear + display + sleep).
-- `mqtt_listener.py`: Optional dynamic update path (listens on `statechange/washing_machine`, regenerates image).
+- `run_dev.py`: Long‑running PNG mode (MQTT + periodic refresh via `REFRESH_INTERVAL`).
+- `run_display.py`: Long‑running E‑Ink mode (hardware init + MQTT + periodic refresh).
+- `mqtt_listener.py`: Legacy simple listener (can be replaced by runners above).
 - `weather_api.py`: Fetch + 1h file cache (`weather_cache.json`), fallback data, icon mapping, UV range derivation.
 - `weather.py`: Rendering logic for current + 5‑day forecast (Swedish localization) using layout constants & font metrics.
 - `electricity_price.py`: Step chart (prices) + bar chart (consumption). Pattern for drawing a titled mini-chart.
-- `devices.py`: Renders provided device list (no hardcoded globals); icon grayscale indicates on/off.
+- `devices.py`: Global in‑memory `DEVICES` list + update helpers; icon grayscale indicates on/off.
 - `garbage.py` / `dishes.py`: Text list sections with Swedish phrasing.
 - `constant.py`: Central fonts + grayscale palette; treat as the single source of visual style.
-- `config.py`: Weather API parameters & cache settings (API key belongs here; avoid leaking/duplicating).
+- `config.py`: Weather API parameters, cache settings, `REFRESH_INTERVAL`.
 
-## Rendering Conventions
-- Shared layout lives ONLY in `compose.py`; do not duplicate in output scripts.
-- Section pattern: `draw_<name>(draw, (x, y), ...)` mutates shared `ImageDraw`; return values are not used.
-- Layout math uses `icon_size`, `big_icon_size`, `text_size`, `headline_text_size` from `constant.py` and spacing multiples of 8 / 16.
+## Development Workflow
+- Create & activate venv; install deps: Pillow + paho-mqtt.
+- Fast iterate preview: `\ls *.py | entr -r venv/bin/python to-image.py`.
+- Continuous dev run: `venv/bin/python run_dev.py` (auto refresh + MQTT).
+- Continuous hardware run: `venv/bin/python run_display.py` (auto refresh + MQTT + E-Ink push).
+- For quick one-off MQTT test: legacy `mqtt_listener.py` still works.
 - Text centering: `draw.textbbox` width calc (see `get_text_width` in `weather.py`, `dishes.py`). Reuse, don’t reimplement with font.getsize.
-- Colors: must come from `colors` dict; never hardcode numeric grayscale values.
-- Device data passed as a list of dicts; update status via `update_device_state(devices, label, on)`.
+## Caching & Network
+- Weather cache TTL = `CACHE_DURATION` (seconds). Honor existing file path logic; if extending, keep atomic JSON writes.
+- On failure: `get_fallback_data()` returns deterministic stub—preserve this safety net.
+- Periodic redraw interval controlled by `REFRESH_INTERVAL` in `config.py` (used by runner scripts).
 - Avoid adding per-call font loads; reuse global font objects defined in `constant.py`.
 
 ## Weather Data Shape (from `get_weather_display_data()`)
