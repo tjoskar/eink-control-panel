@@ -55,6 +55,7 @@ def update_device_by_topic(topic, on):
     """Update device state matching a given MQTT topic. Returns device or None."""
     for d in DEVICES:
         if d.get("topic") == topic:
+            print(f"[DEVICE] Updating '{d.get('label')}' ({topic}) to {'ON' if on else 'OFF'}")
             d["on"] = bool(on)
             return d
     return None

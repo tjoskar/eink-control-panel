@@ -127,7 +127,7 @@ def draw_consumption_chart(draw, pos, width, height):
 
 
 def draw_electricity_price(draw, pos):
-    draw.text((pos[0], pos[1]), "El pris", font=text_font, fill=colors["black"])
+    draw.text((pos[0], pos[1]), "Elpris", font=text_font, fill=colors["black"])
 
     # Draw the price chart below the title
     price_chart_width = 240

@@ -100,9 +100,6 @@ def on_message(client, userdata, msg):
         updated = update_device_by_topic(topic, payload == "on")
         if updated:
             schedule_render()
-        else:
-            print(f"[WARN] Topic {topic} not mapped to device list")
-
 
 def main():
     print("[INIT] Starting display runner (E-Ink mode)")

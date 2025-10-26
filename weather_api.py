@@ -246,12 +246,12 @@ def get_weather_display_data():
         # Return fallback display data
         return {
             "current": {
-                "temp": "15°",
+                "temp": "99°",
                 "icon": "\uf157",
-                "wind_speed": "5 m/s",
+                "wind_speed": "99 m/s",
                 "sun_times": "06:18 / 21:05",
                 "rain": "0 mm",
-                "uv_info": "1 (3, 10 - 14)"
+                "uv_info": "99 (99, 10 - 14)"
             },
             "forecast": [
                 {"day": "Mån", "icon": "\uf157", "temp": "16°/24°"},

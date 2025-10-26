@@ -1,12 +1,12 @@
 """Panel composition module.
 
 Single source for laying out all sections (devices, weather, electricity,
-dishes, garbage). Both file-output (`to-image.py`) and hardware display
-(`to-disply.py`) should call `compose_panel(devices)` to avoid drift.
+dishes, garbage). Both file-output (`to_image.py`) and hardware display
+(`to_display.py`) should call `compose_panel()` to avoid drift.
 
 Usage:
     from compose import compose_panel
-    img = compose_panel(devices)
+    img = compose_panel()
     img.save("main.png")            # for image output
     epd.display(epd.getbuffer(img))  # for hardware
 
@@ -22,12 +22,14 @@ from weather import draw_weather
 from electricity_price import draw_electricity_price
 from dishes import draw_weekly_dishes
 from garbage import draw_garbage_collection
+from last_update import draw_last_update
 
 WIDTH, HEIGHT = 800, 480
 PADDING = 16
 
 def compose_panel():
     """Create and return a fully rendered PIL Image.
+
     Returns:
         PIL.Image: Rendered grayscale image ready for saving or display.
     """
@@ -48,6 +50,9 @@ def compose_panel():
 
     # Garbage collection (below electricity charts)
     draw_garbage_collection(draw, (PADDING + 500, PADDING + 280))
+
+    # Last updated timestamp (bottom-right corner, subtle)
+    draw_last_update(draw, (WIDTH - PADDING, HEIGHT - PADDING))
 
     return image
 
