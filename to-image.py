@@ -1,24 +1,15 @@
-from PIL import Image, ImageDraw, ImageFont
-from constant import colors
-from devices import draw_device_icons
-from weather import draw_weather
-from electricity_price import draw_electricity_price
-from dishes import draw_weekly_dishes
-from garbage import draw_garbage_collection
+"""Image output entrypoint.
 
-# Image
-width, height = 800, 480
-image = Image.new("L", (width, height), 255)
-draw = ImageDraw.Draw(image)
-padding = 16
+Uses shared composition in `compose_panel` so layout stays identical to
+hardware path (`to-disply.py`).
+"""
 
-draw_device_icons(draw, (padding, padding))
-draw_weather(draw, (padding + 36*2, padding))
-draw_electricity_price(draw, (padding + 500, padding))
-# Draw weekly dishes below the weather section
-draw_weekly_dishes(draw, (padding + 36*2, padding + 270))
-# Draw garbage collection reminders below the electricity charts
-draw_garbage_collection(draw, (padding + 500, padding + 280))
+from compose import compose_panel
 
-# Save PNG (for testing on Mac)
-image.save("main.png")
+def generate_image(save_path="main.png"):
+    image = compose_panel()
+    image.save(save_path)
+    return image
+
+if __name__ == "__main__":
+    generate_image()

@@ -1,22 +1,18 @@
 from lib.waveshare_epd.epd7in5_V2 import EPD
-from PIL import Image, ImageDraw, ImageFont
-from constant import colors
-from devices import draw_device_icons
-from weather import draw_weather
+from compose import compose_panel
 
-epd = EPD()
-epd.init()
-epd.Clear()
+def generate_display():
+    """Render and push image buffer to the physical E-Ink display.
 
-# Image
-width, height = 800, 480
-image = Image.new("L", (width, height), 255)
-draw = ImageDraw.Draw(image)
-padding = 16
+    Layout provided by compose_panel to stay consistent with image output.
+    """
+    epd = EPD()
+    epd.init()
+    epd.Clear()
 
-draw_device_icons(draw, (padding, padding))
-draw_weather(draw, (padding + 36*3, padding))
+    image = compose_panel()
+    epd.display(epd.getbuffer(image))
+    epd.sleep()
 
-epd.display(epd.getbuffer(image))
-
-epd.sleep()
+if __name__ == "__main__":
+    generate_display()

@@ -1,4 +1,5 @@
 # filepath: /Users/oskar/Project/home-control-panel-eink/requirements.txt
 pillow==11.2.1
-# No external dependencies needed for the weather API
-# We're using only the standard library for network requests
+# MQTT client for dynamic updates
+paho-mqtt==1.6.1
+# Weather API uses only standard library (urllib)
