@@ -2,3 +2,4 @@ __pycache__
 venv
 main.png
 weather_cache.json
+electricity_cache.json

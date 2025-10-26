@@ -8,14 +8,13 @@
 - Remember: This runs on a Raspberry Pi Zero W with limited CPU/RAM!
 - The output is in Swedish but all code/comments should remain in English.
 - Two usage modes:
-  - Local preview: `python to-image.py` -> writes `main.png`.
-  - Hardware display: `to-disply.py` (Waveshare driver `lib/waveshare_epd/epd7in5_V2.py`).
+  - Local preview: `venv/bin/python to_image.py` -> writes `main.png` (always use the virtualenv interpreter).
+  - Hardware display: `venv/bin/python to_display.py` (Waveshare driver `lib/waveshare_epd/epd7in5_V2.py`).
 
 ## Key Files & Responsibilities
-## Key Files & Responsibilities
 - `compose.py`: Single source for panel layout; `compose_panel(devices)` returns a PIL Image with all sections drawn.
-- `to-image.py`: Thin wrapper calling `compose_panel` then saving `main.png`.
-- `to-disply.py`: Thin wrapper calling `compose_panel` then pushing to Waveshare EPD (clear + display + sleep).
+- `to_image.py`: Thin wrapper calling `compose_panel` then saving `main.png`.
+- `to_display.py`: Thin wrapper calling `compose_panel` then pushing to Waveshare EPD (clear + display + sleep).
 - `run_dev.py`: Long‑running PNG mode (MQTT + periodic refresh via `REFRESH_INTERVAL`).
 - `run_display.py`: Long‑running E‑Ink mode (hardware init + MQTT + periodic refresh).
 - `mqtt_listener.py`: Legacy simple listener (can be replaced by runners above).
@@ -29,7 +28,7 @@
 
 ## Development Workflow
 - Create & activate venv; install deps: Pillow + paho-mqtt.
-- Fast iterate preview: `\ls *.py | entr -r venv/bin/python to-image.py`.
+- Fast iterate preview: `\ls *.py | entr -r venv/bin/python to_image.py`.
 - Continuous dev run: `venv/bin/python run_dev.py` (auto refresh + MQTT).
 - Continuous hardware run: `venv/bin/python run_display.py` (auto refresh + MQTT + E-Ink push).
 - For quick one-off MQTT test: legacy `mqtt_listener.py` still works.
@@ -70,7 +69,7 @@ Then integrate inside `compose_panel` in `compose.py` (single source of layout).
 
 ## Development Workflow
 - Create & activate venv; install deps: Pillow + paho-mqtt.
-- Fast iterate preview: `\ls *.py | entr -r venv/bin/python to-image.py`.
+- Fast iterate preview: `\ls *.py | entr -r venv/bin/python to_image.py`.
 - Dynamic device updates: run `venv/bin/python mqtt_listener.py` then publish MQTT messages.
 - Hardware: adapt `to-disply.py` only for EPD init/clear/display/sleep; keep layout untouched.
 
