@@ -122,7 +122,7 @@ def main():
     client.loop_start()
 
     threading.Thread(target=refresh_loop, daemon=True).start()
-    threading.Thread(target=button_listener, daemon=True).start()
+    # threading.Thread(target=button_listener, daemon=True).start()
 
     print("[RUNNING] Press Ctrl+C to exit")
     try:

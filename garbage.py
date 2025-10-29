@@ -2,37 +2,46 @@ from PIL import Image, ImageDraw, ImageFont
 from gui_constant import colors, icon_size, icon_font, text_font, text_size
 from datetime import datetime, timedelta
 
-# Fake garbage collection data
 # This could later be fetched from an external source
 # Each tuple contains (household waste date, garden waste date)
 # Both dates are in the same week, Wednesday and Friday
 garbage_collection_dates = [
-    {"household": "2025-05-28", "garden": "2025-05-30"},  # Week 1
-    {"household": "2025-06-11", "garden": "2025-06-13"},  # Week 3
-    {"household": "2025-06-25", "garden": "2025-06-27"},  # Week 5
-    {"household": "2025-07-09", "garden": "2025-07-11"},  # Week 7
-    {"household": "2025-07-23", "garden": "2025-07-25"},  # Week 9
+    {"household": "2025-10-29", "garden": "2025-10-31"},
+    {"household": "2025-11-12", "garden": "2025-11-14"},
+    {"household": "2025-11-26", "garden": "2025-11-28"},
+    {"household": "2025-12-10"},
+    {"household": "2025-12-24"},
+    {"household": "2026-01-07"},
+    {"household": "2026-01-21"},
 ]
 
-def get_next_collection(date_str):
-    """Find the next garbage collection dates after the given date."""
-    today = datetime.strptime(date_str, "%Y-%m-%d").date()
+def get_next_collection(today_str):
+    """Return next up to two collection events (household/garden) from today.
 
-    # Filter dates that are in the future
+    Garden events are optional; skip gracefully if missing.
+    """
+    today = datetime.strptime(today_str, "%Y-%m-%d").date()
+
     future_dates = []
     for collection in garbage_collection_dates:
-        household_date = datetime.strptime(collection["household"], "%Y-%m-%d").date()
-        garden_date = datetime.strptime(collection["garden"], "%Y-%m-%d").date()
-
+        # Parse household date
+        try:
+            household_date = datetime.strptime(collection["household"], "%Y-%m-%d").date()
+        except Exception:
+            continue  # Skip malformed entry
         if household_date >= today:
             future_dates.append({"type": "household", "date": household_date})
-        if garden_date >= today:
-            future_dates.append({"type": "garden", "date": garden_date})
 
-    # Sort by date
-    future_dates.sort(key=lambda x: x["date"])
+        # Garden is optional
+        garden_raw = collection.get("garden")
+        if garden_raw:
+            try:
+                garden_date = datetime.strptime(garden_raw, "%Y-%m-%d").date()
+                if garden_date >= today:
+                    future_dates.append({"type": "garden", "date": garden_date})
+            except Exception:
+                pass  # Ignore malformed garden date
 
-    # Return next 2 collections or fewer if not enough future dates
     return future_dates[:2]
 
 def get_days_until(target_date, today_str):
@@ -57,16 +66,9 @@ def get_reminder_message(collection, today_str):
     else:
         return f"Trädgårdsavfall: {date_str} ({days_until})"
 
-def draw_garbage_collection(draw, pos, today_str="2025-05-29"):
-    """Draw the garbage collection information section."""
-    # Draw trash icon to the left of the title
-    # draw.text((pos[0], pos[1]), "\ue872", font=icon_font, fill=colors["black"])
-
-    # Draw section title after the icon
-    icon_width = icon_size + 8  # Icon width plus some spacing
-    # draw.text((pos[0] + icon_width, pos[1] + (icon_size - text_size) / 2), "Sophämtning", font=text_font, fill=colors["black"])
-
-    # Get the next collections
+def draw_garbage_collection(draw, pos):
+    # Determine today's date string (UTC local naive)
+    today_str = datetime.now().strftime("%Y-%m-%d")
     next_collections = get_next_collection(today_str)
 
     # Calculate positions and spacing

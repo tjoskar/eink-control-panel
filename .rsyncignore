@@ -2,4 +2,10 @@
 __pycache__/
 venv/
 main.png
-requirements.txt
+.DS_Store
+.gitignore
+.github
+.vscode
+weather_cache.json
+electricity_cache.json
+dishes_cache.json
