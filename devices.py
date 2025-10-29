@@ -41,6 +41,25 @@ def draw_device_icons(draw, pos):
 
         icon_y_offset += box_height
 
+def get_devices_region(padding, full_height):
+    """Return a cropped devices column image and its bbox within the full panel.
+
+    Args:
+        padding (int): Outer panel padding.
+        full_height (int): Total panel height.
+
+    Returns:
+        (PIL.Image, tuple): (region_img, bbox)
+            bbox format: (x1, y1, x2, y2)
+    """
+    devices_width = icon_size * 2  # conservative 2-column width
+    bbox = (padding, padding, padding + devices_width, full_height - padding)
+    region_img_height = full_height - 2 * padding
+    region_img = Image.new("L", (devices_width, region_img_height), colors["white"])
+    region_draw = ImageDraw.Draw(region_img)
+    draw_device_icons(region_draw, (0, 0))
+    return region_img, bbox
+
 def update_device_state(label, on):
     """Update a device's on/off status by label. Returns global list."""
     for d in DEVICES:
@@ -54,9 +73,10 @@ def update_device_state(label, on):
 def update_device_by_topic(topic, on):
     """Update device state matching a given MQTT topic. Returns device or None."""
     for d in DEVICES:
-        if d.get("topic") == topic:
+        on_bool = bool(on)
+        if d.get("topic") == topic and d.get("on") != on_bool:
             print(f"[DEVICE] Updating '{d.get('label')}' ({topic}) to {'ON' if on else 'OFF'}")
-            d["on"] = bool(on)
+            d["on"] = on_bool
             return d
     return None
 
@@ -65,4 +85,5 @@ __all__ = [
     "update_device_state",
     "update_device_by_topic",
     "DEVICES",
+    "get_devices_region",
 ]
