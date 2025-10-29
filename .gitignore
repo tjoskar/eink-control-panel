@@ -4,3 +4,4 @@ main.png
 weather_cache.json
 electricity_cache.json
 dishes_cache.json
+config.py

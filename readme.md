@@ -102,3 +102,13 @@ API data is automatically fetched when the display updates, providing:
 - Precipitation data
 - UV index with forecast for high UV periods
 - 5-day weather forecast
+
+## Running on eink display
+
+### Setup
+
+### Deployment
+
+```
+rsync -av --exclude-from='.rsyncignore' . tjoskar@nasse:/home/tjoskar/control-panel
+```
