@@ -27,15 +27,7 @@ from display_controller import DisplayController
 from lib.waveshare_epd.epd7in5_V2 import EPD
 
 def button_listener(controller: DisplayController, client: mqtt.Client):
-    """Listen for physical button presses and toggle 'Motorvärmare'.
-
-    Assumptions:
-        - GPIO numbering is BCM (gpiozero default when using raw pin numbers)
-        - DEVICES list contains an entry with label 'Motorvärmare'
-    """
     button = Button(21, pull_up=True, bounce_time=0.05)
-
-    # LED initialization now handled inside devices.py when state updates; no action needed here.
 
     def handle_press():
         mv_device = find_motorvarmare()
@@ -43,24 +35,20 @@ def button_listener(controller: DisplayController, client: mqtt.Client):
             print("[BUTTON] 'Motorvärmare' device not found; ignoring press")
             return
         currently_on = bool(mv_device.get("on"))
-        if not currently_on:
-            set_motorvarmare(True)
-            try:
-                client.publish("statechange/request/motorvarmare", "on", retain=False)
-            except Exception as e:
-                print(f"[BUTTON][MQTT] Publish failed: {e}")
-            # controller.show_dialog("Motorvärmaren har startats")
-        else:
+        if currently_on:
             set_motorvarmare(False)
             try:
                 client.publish("statechange/request/motorvarmare", "off", retain=False)
             except Exception as e:
                 print(f"[BUTTON][MQTT] Publish failed: {e}")
-            # controller.show_dialog("Motorvärmaren har stängts av")
-        # Partial update devices column
-        region_img, bbox = get_devices_region(PADDING, HEIGHT)
-        controller.partial_update(region_img, bbox)
-        # controller.fast_render()
+            controller.show_dialog("Motorvärmaren har stängts av")
+        else:
+            set_motorvarmare(True)
+            try:
+                client.publish("statechange/request/motorvarmare", "on", retain=False)
+            except Exception as e:
+                print(f"[BUTTON][MQTT] Publish failed: {e}")
+            controller.show_dialog("Motorvärmaren har startats")
 
     button.when_pressed = handle_press
     print("[BUTTON] Listener started (GPIO21), LED on GPIO2")
@@ -91,8 +79,7 @@ def on_message(client, userdata, msg):
     if topic in MQTT_DEVICE_TOPICS and payload in {"on", "off"}:
         updated = update_device_by_topic(topic, payload == "on")
         if updated and userdata:
-            region_img, bbox = get_devices_region(PADDING, HEIGHT)
-            userdata.partial_update(region_img, bbox)
+            userdata.fast_render()
 
 def main():
     print("[INIT] Starting display runner (E-Ink mode)")
@@ -119,7 +106,7 @@ def main():
     stop_event = threading.Event()
     def refresh_loop():
         while not stop_event.is_set():
-            time.sleep(3600)  # fixed 1h; can be changed to REFRESH_INTERVAL if desired
+            time.sleep(3600)  # fixed 1h
             if stop_event.is_set():
                 break
             controller.render()
