@@ -17,11 +17,47 @@ from PIL import Image, ImageDraw, ImageFont
 from gui_constant import colors, icon_size, icon_font, text_font
 from config import DEVICES_CONFIG
 
+# Optional hardware LED (GPIO2) to indicate Motorvärmare status.
+# Guard import so module works in non-RPi environments.
+try:
+    from gpiozero import LED  # type: ignore
+    _motor_led = LED(2)
+except Exception:  # broad: ImportError or runtime error creating LED
+    _motor_led = None  # Fallback: no hardware available
+
+MOTOR_LABEL = "Motorvärmare"
+
+def set_motorvarmare(on: bool):
+    """Turn LED on/off if hardware available.
+
+    Args:
+        on (bool): Desired state.
+    """
+    _motor_device = find_motorvarmare()
+    if _motor_led is None or _motor_device is None:
+        return
+    try:
+        if on:
+            _motor_device["on"] = True
+            _motor_led.on()
+        else:
+            _motor_device["on"] = False
+            _motor_led.off()
+    except Exception:
+        # Silently ignore GPIO runtime errors (e.g., permissions)
+        pass
+
 # Global in-memory device list initialized from config
 DEVICES = [
     {"label": d["label"], "icon": d["icon"], "on": d["on"], "topic": d["topic"]}
     for d in DEVICES_CONFIG
 ]
+
+def find_motorvarmare():
+    for d in DEVICES:
+        if d.get("label") == "Motorvärmare":
+            return d
+    return None
 
 def draw_device_icons(draw, pos):
     """Draw a vertical list of device icons.
@@ -60,15 +96,6 @@ def get_devices_region(padding, full_height):
     draw_device_icons(region_draw, (0, 0))
     return region_img, bbox
 
-def update_device_state(label, on):
-    """Update a device's on/off status by label. Returns global list."""
-    for d in DEVICES:
-        if d.get("label") == label:
-            d["on"] = bool(on)
-            return DEVICES
-    # If label not found, append minimal entry (topic unknown)
-    DEVICES.append({"label": label, "icon": "\ue832", "on": bool(on), "topic": None})
-    return DEVICES
 
 def update_device_by_topic(topic, on):
     """Update device state matching a given MQTT topic. Returns device or None."""
@@ -77,13 +104,16 @@ def update_device_by_topic(topic, on):
         if d.get("topic") == topic and d.get("on") != on_bool:
             print(f"[DEVICE] Updating '{d.get('label')}' ({topic}) to {'ON' if on else 'OFF'}")
             d["on"] = on_bool
+            if d.get("label") == MOTOR_LABEL:
+                set_motorvarmare(on_bool)
             return d
     return None
 
 __all__ = [
+    "find_motorvarmare"
     "draw_device_icons",
-    "update_device_state",
     "update_device_by_topic",
     "DEVICES",
     "get_devices_region",
+    "set_motorvarmare",
 ]

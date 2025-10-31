@@ -9,8 +9,9 @@ Future extension: add physical button listener thread.
 import time
 import sys
 import threading
+import signal
 import paho.mqtt.client as mqtt
-from PIL import Image, ImageDraw
+from gpiozero import Button
 
 from config import (
     MQTT_DEVICE_TOPICS,
@@ -20,14 +21,71 @@ from config import (
     MQTT_PASSWORD,
     MQTT_TOPIC_PREFIX,
 )
-from devices import update_device_by_topic, get_devices_region
-from compose import PADDING, HEIGHT, WIDTH
+from devices import update_device_by_topic, get_devices_region, find_motorvarmare, set_motorvarmare, DEVICES
+from compose import PADDING, HEIGHT
 from display_controller import DisplayController
+from lib.waveshare_epd.epd7in5_V2 import EPD
 
-def button_listener(controller: DisplayController):
-    # Placeholder for GPIO integration
+def button_listener(controller: DisplayController, client: mqtt.Client):
+    """Listen for physical button presses and toggle 'Motorvärmare'.
+
+    Hardware:
+        - Button on GPIO pin 21 (pull-up, debounce 0.05s)
+        - LED on GPIO pin 2 (indicator ON when Motorvärmare active)
+
+    Behavior on press:
+        If Motorvärmare off:
+            1. Set on=True
+            2. Turn LED on
+            3. Publish MQTT 'statechange/request/motorvarmare' payload 'on' (retain=False)
+            4. controller.show_dialog("Motorvärmaren har startats")
+            5. Partial update devices region
+        If Motorvärmare on:
+            1. Set on=False
+            2. Turn LED off
+            3. Publish MQTT 'statechange/request/motorvarmare' payload 'off' (retain=False)
+            4. controller.show_dialog("Motorvärmaren har stängts av")
+            5. Partial update devices region
+
+    Assumptions:
+        - GPIO numbering is BCM (gpiozero default when using raw pin numbers)
+        - DEVICES list contains an entry with label 'Motorvärmare'
+    """
+    button = Button(21, pull_up=True, bounce_time=0.05)
+
+    # LED initialization now handled inside devices.py when state updates; no action needed here.
+
+    def handle_press():
+        mv_device = find_motorvarmare()
+        if mv_device is None:
+            print("[BUTTON] 'Motorvärmare' device not found; ignoring press")
+            return
+        currently_on = bool(mv_device.get("on"))
+        if not currently_on:
+            set_motorvarmare(True)
+            try:
+                client.publish("statechange/request/motorvarmare", "on", retain=False)
+            except Exception as e:
+                print(f"[BUTTON][MQTT] Publish failed: {e}")
+            # controller.show_dialog("Motorvärmaren har startats")
+        else:
+            set_motorvarmare(False)
+            try:
+                client.publish("statechange/request/motorvarmare", "off", retain=False)
+            except Exception as e:
+                print(f"[BUTTON][MQTT] Publish failed: {e}")
+            # controller.show_dialog("Motorvärmaren har stängts av")
+        # Partial update devices column
+        region_img, bbox = get_devices_region(PADDING, HEIGHT)
+        controller.partial_update(region_img, bbox)
+        # controller.fast_render()
+
+    button.when_pressed = handle_press
+    print("[BUTTON] Listener started (GPIO21), LED on GPIO2")
     while not controller.stopped:
-        time.sleep(2)
+        time.sleep(0.2)
+    # Cleanup implicit: gpiozero devices auto close on GC.
+    print("[BUTTON] Listener stopped")
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -56,7 +114,8 @@ def on_message(client, userdata, msg):
 
 def main():
     print("[INIT] Starting display runner (E-Ink mode)")
-    controller = DisplayController()
+    epd = EPD()
+    controller = DisplayController(epd)
     controller.render()
 
     client = mqtt.Client(userdata=controller)
@@ -83,19 +142,41 @@ def main():
                 break
             controller.render()
     threading.Thread(target=refresh_loop, daemon=True).start()
-    # threading.Thread(target=button_listener, args=(controller,), daemon=True).start()
+    threading.Thread(target=button_listener, args=(controller, client), daemon=True).start()
 
-    print("[RUNNING] Press Ctrl+C to exit")
+    # Unified shutdown routine so signals and exceptions reuse logic
+    def shutdown(reason: str):
+        print(f"\n[SHUTDOWN] {reason}...")
+        stop_event.set()
+        controller.stop()
+        try:
+            client.loop_stop()
+        except Exception:
+            pass
+        try:
+            client.disconnect()
+        except Exception:
+            pass
+        print("[SHUTDOWN] Done")
+
+    # Signal handlers (SIGINT = Ctrl+C, SIGTERM = kill default). SIGKILL cannot be caught.
+    def handle_signal(signum, frame):
+        name = {signal.SIGINT: "SIGINT", signal.SIGTERM: "SIGTERM"}.get(signum, str(signum))
+        shutdown(f"Received {name}")
+        # Exit immediately after cleanup
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    print("[RUNNING] Press Ctrl+C or send SIGTERM to exit")
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n[SHUTDOWN] Stopping...")
-        stop_event.set()
-        controller.stop()
-        client.loop_stop()
-        client.disconnect()
-        print("[SHUTDOWN] Done")
+        shutdown("KeyboardInterrupt")
+    except Exception as e:
+        shutdown(f"Unhandled exception: {e}")
 
 
 if __name__ == "__main__":
