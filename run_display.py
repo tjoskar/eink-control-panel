@@ -29,24 +29,6 @@ from lib.waveshare_epd.epd7in5_V2 import EPD
 def button_listener(controller: DisplayController, client: mqtt.Client):
     """Listen for physical button presses and toggle 'Motorvärmare'.
 
-    Hardware:
-        - Button on GPIO pin 21 (pull-up, debounce 0.05s)
-        - LED on GPIO pin 2 (indicator ON when Motorvärmare active)
-
-    Behavior on press:
-        If Motorvärmare off:
-            1. Set on=True
-            2. Turn LED on
-            3. Publish MQTT 'statechange/request/motorvarmare' payload 'on' (retain=False)
-            4. controller.show_dialog("Motorvärmaren har startats")
-            5. Partial update devices region
-        If Motorvärmare on:
-            1. Set on=False
-            2. Turn LED off
-            3. Publish MQTT 'statechange/request/motorvarmare' payload 'off' (retain=False)
-            4. controller.show_dialog("Motorvärmaren har stängts av")
-            5. Partial update devices region
-
     Assumptions:
         - GPIO numbering is BCM (gpiozero default when using raw pin numbers)
         - DEVICES list contains an entry with label 'Motorvärmare'
