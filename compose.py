@@ -23,9 +23,21 @@ from electricity_price import draw_electricity_price
 from dishes import draw_weekly_dishes
 from garbage import draw_garbage_collection
 from last_update import draw_last_update
+from typing import Callable
 
 WIDTH, HEIGHT = 800, 480
 PADDING = 16
+
+def _safe(func: Callable, label: str, *args, **kwargs):
+    """Execute a drawing function safely, logging any exception and continuing.
+
+    Keeps composition resilient so a failing section doesn't break the whole panel.
+    """
+    try:
+        func(*args, **kwargs)
+    except Exception as e:  # noqa: BLE001 (broad ok: we want to catch all rendering issues)
+        print(f"[COMPOSE][ERROR] Section '{label}' failed: {e}")
+
 
 def compose_panel():
     """Create and return a fully rendered PIL Image.
@@ -37,22 +49,22 @@ def compose_panel():
     draw = ImageDraw.Draw(image)
 
     # Devices (left column)
-    draw_device_icons(draw, (PADDING, PADDING))
+    _safe(draw_device_icons, "devices", draw, (PADDING, PADDING))
 
     # Weather (center-left)
-    draw_weather(draw, (PADDING + 36 * 2, PADDING))
+    _safe(draw_weather, "weather", draw, (PADDING + 36 * 2, PADDING))
 
     # Electricity price + consumption (right top)
-    draw_electricity_price(draw, (PADDING + 500, PADDING))
+    _safe(draw_electricity_price, "electricity", draw, (PADDING + 500, PADDING))
 
     # Weekly dishes (below weather)
-    draw_weekly_dishes(draw, (PADDING + 36 * 2, PADDING + 270))
+    _safe(draw_weekly_dishes, "dishes", draw, (PADDING + 36 * 2, PADDING + 270))
 
     # Garbage collection (below electricity charts)
-    draw_garbage_collection(draw, (PADDING + 500, PADDING + 280))
+    _safe(draw_garbage_collection, "garbage", draw, (PADDING + 500, PADDING + 280))
 
     # Last updated timestamp (bottom-right corner, subtle)
-    draw_last_update(draw, (WIDTH - PADDING, HEIGHT - PADDING))
+    _safe(draw_last_update, "last_update", draw, (WIDTH - PADDING, HEIGHT - PADDING))
 
     return image
 
