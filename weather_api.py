@@ -14,12 +14,10 @@ from config import (
     CACHE_DURATION
 )
 
-# File path for cached weather data
+# Cache path (1h TTL controlled via CACHE_DURATION)
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weather_cache.json")
 
-# Weather icons mapping from OpenWeatherMap codes to icon font characters
-# This mapping may need to be adjusted based on the specific icons in your font
-# See https://openweathermap.org/weather-conditions
+# Weather icon mapping (OpenWeatherMap code -> font glyph). Fallback defaults to cloudy.
 WEATHER_ICONS = {
     # Clear
     "01d": "\uf157",  # Clear day
@@ -48,7 +46,7 @@ WEATHER_ICONS = {
     "50n": "\ue8e7"
 }
 
-# Day of week abbreviations in Swedish
+# Weekday abbreviations (Swedish)
 DAYS_OF_WEEK_SV = {
     0: "Mån",
     1: "Tis",
@@ -60,7 +58,7 @@ DAYS_OF_WEEK_SV = {
 }
 
 def get_cached_data():
-    """Get weather data from cache file if it exists and is not expired."""
+    """Return cached weather data if present and valid; else None."""
     try:
         if os.path.exists(CACHE_FILE):
             with open(CACHE_FILE, 'r') as f:
@@ -74,7 +72,7 @@ def get_cached_data():
     return None
 
 def save_to_cache(data):
-    """Save weather data to cache file."""
+    """Persist payload + timestamp to cache file (best-effort)."""
     try:
         cache_data = {
             'timestamp': time.time(),
@@ -86,7 +84,7 @@ def save_to_cache(data):
         print(f"Error writing cache: {e}")
 
 def fetch_weather_data():
-    """Fetch weather data from OpenWeatherMap API or cache."""
+    """Fetch weather data (cache first, then API). Fallback on error."""
 
     # Check cache first
     cached_data = get_cached_data()
@@ -121,7 +119,7 @@ def fetch_weather_data():
     return get_fallback_data()
 
 def get_fallback_data():
-    """Generate fallback weather data in case of API failure."""
+    """Deterministic fallback data structure used if API fails."""
     return {
         "current": {
             "temp": 15.0,
@@ -142,11 +140,7 @@ def get_fallback_data():
     }
 
 def get_uv_info(weather_data):
-    """Extract UV index information for current day only.
-
-    Format: <current UV index> (<max UV>, <start hour> - <end hour>)
-    If UV index never reaches 3, only show the current UV index.
-    """
+    """Return UV info string: current or "cur (max, start - end)" if >=3 hours exist."""
     current_uv = weather_data.get('current', {}).get('uvi', 0)
     current_time = datetime.fromtimestamp(weather_data.get('current', {}).get('dt', 0))
     current_date = current_time.date()
@@ -190,7 +184,7 @@ def get_uv_info(weather_data):
     return uv_text
 
 def get_weather_display_data():
-    """Process weather data into the format needed for display."""
+    """Transform raw weather data into display dict used by renderer."""
     try:
         weather_data = fetch_weather_data()
 
@@ -261,17 +255,3 @@ def get_weather_display_data():
                 {"day": "Fre", "icon": "\ue80f", "temp": "15°/22°"}
             ]
         }
-
-if __name__ == "__main__":
-    # Test the module if run directly
-    data = get_weather_display_data()
-    print("Current Weather:")
-    print(f"Temperature: {data['current']['temp']}")
-    print(f"Icon: {data['current']['icon']}")
-    print(f"Wind Speed: {data['current']['wind_speed']}")
-    print(f"Sun Times: {data['current']['sun_times']}")
-    print(f"Rain: {data['current']['rain']}")
-    print(f"UV Info: {data['current']['uv_info']}")
-    print("\nForecast:")
-    for day in data['forecast']:
-        print(f"{day['day']}: {day['icon']} {day['temp']}")

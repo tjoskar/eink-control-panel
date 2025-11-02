@@ -2,10 +2,7 @@ from lib.waveshare_epd.epd7in5_V2 import EPD
 from compose import compose_panel
 
 def generate_display():
-    """Render and push image buffer to the physical E-Ink display.
-
-    Layout provided by compose_panel to stay consistent with image output.
-    """
+    """Render and push image buffer to physical E‑Ink display (layout via compose_panel)."""
     epd = EPD()
     epd.init()
     epd.Clear()

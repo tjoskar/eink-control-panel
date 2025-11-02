@@ -1,23 +1,6 @@
-"""Dialog rendering helper.
+"""Dialog helper building a simple boxed message image (optional drop shadow).
 
-Provides `build_dialog_image(text, width=200, height=100, padding=6, shadow=True, shadow_offset=3)`
-returning a PIL grayscale Image of a simple DOS-era style dialog box.
-
-Adds an optional drop shadow along the right and bottom edges (like old
-DOS / Turbo Vision dialogs) by enlarging the image canvas. Shadow uses a
-slightly darker gray so it remains subtle on e‑ink.
-
-Separated from the hardware controller so it can be reused for local
-preview/testing (e.g. composing a dialog into an off-screen image and
-saving to disk) without initializing the E-Ink hardware.
-
-Usage example:
-    from dialog import build_dialog_image
-    img = build_dialog_image("Test meddelande", shadow=True)
-    img.save("dialog_preview.png")
-
-The wrapping is simple greedy word wrapping; left-aligned text.
-Limits to ~5–6 lines to avoid overflow.
+Greedy word wrapping; limits lines to avoid overflow. Reusable without hardware.
 """
 from typing import List
 from PIL import Image, ImageDraw

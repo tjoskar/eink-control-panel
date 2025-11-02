@@ -4,15 +4,14 @@ import time
 from datetime import datetime, timezone
 import urllib.request
 import urllib.error
-from PIL import Image, ImageDraw, ImageFont
-from gui_constant import colors, icon_size, icon_font, text_font
+from gui_constant import colors, text_font
 from config import TIBBER_TOKEN
 
-# Cache settings (TTL 5 hours)
+# Cache settings (TTL 5h)
 ELECTRICITY_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "electricity_cache.json")
 ELECTRICITY_CACHE_TTL = 18000  # 5 hours in seconds
 
-# GraphQL query for Tibber (combined price + consumption)
+# GraphQL query (price info + last 7 days consumption)
 TIBBER_QUERY = """
 {\n  viewer {\n    homes {\n      currentSubscription {\n        priceInfo {\n          today {\n            total\n            startsAt\n            level\n          }\n          tomorrow {\n            total\n            startsAt\n            level\n          }\n        }\n      }\n      consumption(resolution: DAILY, last: 7) {\n        nodes {\n          cost\n          consumption\n        }\n      }\n    }\n  }\n}\n"""
 
@@ -44,7 +43,7 @@ def _save_electricity_cache(data):
         print(f"Error writing electricity cache: {e}")
 
 def _fetch_tibber_prices():
-    """Fetch raw price data from Tibber GraphQL API. Returns dict or None plus error code."""
+    """Return (data_dict, error_code). error_code may be HTTP status or None."""
     if not TIBBER_TOKEN:
         # No token configured
         return None, 401
@@ -69,17 +68,7 @@ def _fetch_tibber_prices():
         return None, None
 
 def get_electricity_price_data():
-    """Get processed electricity price list and consumption data.
-
-    Returns: (prices_list, entries, highlight_index, level_label, consumption_values, consumption_costs, error_code)
-    prices_list: list of int (öre)
-    entries: list of dict with total_ore, startsAt, level
-    highlight_index: int or -1
-    level_label: Swedish label string or "" if not available
-    consumption_values: list of floats (kWh) last 7 days (may be empty)
-    consumption_costs: list of floats (SEK) aligned with consumption_values
-    error_code: HTTP status code if failed, else None
-    """
+    """Return tuple: (prices_list, entries, highlight_idx, level_label, consumption_kwh, consumption_costs, error_code)."""
     # Try cache
     cached = _load_electricity_cache()
     error_code = None
@@ -166,11 +155,11 @@ def get_electricity_price_data():
         return [], [], -1, "", [], [], error_code
 
 def draw_price_chart(draw, pos, width, height, prices, highlight_index):
-    # Chart area dimensions
-    chart_width = width  # Fixed width as requested
-    chart_height = height - 30  # Leave space for padding at bottom
+    # Step chart (prices)
+    chart_width = width
+    chart_height = height - 30
 
-    # Calculate scaling factors
+    # Scaling
     if not prices:
         return  # Nothing to draw
     max_price = max(prices)
@@ -178,20 +167,20 @@ def draw_price_chart(draw, pos, width, height, prices, highlight_index):
     y_scaling = chart_height / (max_price - min_price) if max_price != min_price else 1
     x_scaling = chart_width / (len(prices) - 1) if len(prices) > 1 else 1
 
-    # Draw some y-axis labels
+    # y labels
     y_labels = [min_price, (max_price + min_price) / 2, max_price]
     for i, label in enumerate(y_labels):
         y_pos = pos[1] + chart_height - (label - min_price) * y_scaling
         draw.text((pos[0], y_pos - 6), f"{label:.0f}", font=text_font, fill=colors["black"])
 
-    # Plot the price data
+    # Points
     points = []
     for i, p in enumerate(prices):
         x = pos[0] + 30 + i * x_scaling
         y = pos[1] + chart_height - (p - min_price) * y_scaling
         points.append((x, y))
 
-    # Draw step chart with vertical lines between points
+    # Step chart
     if len(points) > 1:
         for i in range(len(points) - 1):
             # Draw horizontal line from current point to below the next point
@@ -202,7 +191,7 @@ def draw_price_chart(draw, pos, width, height, prices, highlight_index):
             draw.line([(points[i+1][0], points[i][1]), (points[i+1][0], points[i+1][1])],
                       fill=colors["black"], width=2)
 
-    # Only draw dot at highlight_index
+    # Highlight dot
     if 0 <= highlight_index < len(points):
         highlight_point = points[highlight_index]
         draw.ellipse((highlight_point[0] - 3, highlight_point[1] - 3,
@@ -211,29 +200,29 @@ def draw_price_chart(draw, pos, width, height, prices, highlight_index):
 
 
 def draw_consumption_chart(draw, pos, width, height, consumption, costs):
-    # Chart area dimensions
+    # Bar chart (daily consumption)
     chart_width = width
     chart_height = height
 
-    # Calculate scaling factors
+    # Scaling
     if not consumption:
         return
     max_consumption = max(consumption)
     y_scaling = chart_height / max_consumption if max_consumption > 0 else 1
 
-    # Calculate bar width based on available space and number of bars
+    # Bar geometry
     bar_width = int(chart_width / len(consumption)) - 4  # 4px gap between bars
 
-    # Draw axis labels with increased spacing (moved from -20 to -30)
+    # Title
     draw.text((pos[0], pos[1] - 30), "Förbrukning (kWh, kr)", font=text_font, fill=colors["black"])
 
-    # Draw some y-axis labels
+    # y labels
     y_labels = [max_consumption / 2, max_consumption]
     for i, label in enumerate(y_labels):
         y_pos = pos[1] + chart_height - (label * y_scaling)
         draw.text((pos[0], y_pos - 6), f"{label:.1f}", font=text_font, fill=colors["black"])
 
-    # Draw the bars
+    # Bars + cost labels
     for i, value in enumerate(consumption):
         bar_height = value * y_scaling
         x1 = pos[0] + 35 + i * (bar_width + 4)  # 4px gap
@@ -262,27 +251,25 @@ def draw_electricity_price(draw, pos):
 
     title = "Elpris"
     if level_label:
-        # Append current highlighted price if available
         if 0 <= highlight_index < len(prices):
-            current_price = prices[highlight_index]
-            title = f"{title} ({level_label} {current_price} öre)"
+            title = f"Elpris ({level_label} {prices[highlight_index]} öre)"
         else:
-            title = f"{title} ({level_label})"
+            title = f"Elpris ({level_label})"
     draw.text((pos[0], pos[1]), title, font=text_font, fill=colors["black"])
 
-    # Draw the price chart below the title
+    # Price chart
     price_chart_width = 240
     price_chart_height = 100
     price_chart_pos = (pos[0], pos[1] + 30)
 
     draw_price_chart(draw, price_chart_pos, price_chart_width, price_chart_height, prices, highlight_index)
 
-    # If there was an error (HTTP status) show it below the price chart area
+    # Error code (if any)
     if error_code is not None:
         error_text = f"Fel: {error_code}"
         draw.text((price_chart_pos[0], price_chart_pos[1] + price_chart_height + 5), error_text, font=text_font, fill=colors["black"])
 
-    # Draw the consumption chart below the price chart (adjust y if error shown)
+    # Consumption chart
     consumption_chart_width = 240
     consumption_chart_height = 80
     gap = 40

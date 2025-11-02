@@ -1,24 +1,14 @@
 """Device rendering & state utilities.
 
-Devices are defined centrally in `config.py` (`DEVICES_CONFIG`) with Swedish
-labels and MQTT topics. This module maintains an in-memory mutable copy
-including current `on` status.
-
-Device dict shape:
-{
-  "label": "Tvättmaskin",      # Swedish label
-  "topic": "statechange/washing_machine",  # MQTT topic string
-  "icon": "\ue832",            # Glyph from loaded icon font
-  "on": True                     # Boolean status; off => light_gray icon
-}
+Maintains an in-memory mutable copy of devices defined in `config.py`.
+Each device dict contains: label, topic, icon glyph, and current boolean `on`.
 """
 
-from PIL import Image, ImageDraw, ImageFont
-from gui_constant import colors, icon_size, icon_font, text_font
+from PIL import Image, ImageDraw
+from gui_constant import colors, icon_size, icon_font
 from config import DEVICES_CONFIG
 
-# Optional hardware LED (GPIO2) to indicate Motorvärmare status.
-# Guard import so module works in non-RPi environments.
+# Optional hardware LED (GPIO2) to indicate Motorvärmare status (ignored if unavailable).
 try:
     from gpiozero import LED  # type: ignore
     _motor_led = LED(2)
@@ -28,11 +18,7 @@ except Exception:  # broad: ImportError or runtime error creating LED
 MOTOR_LABEL = "Motorvärmare"
 
 def set_motorvarmare(on: bool):
-    """Turn LED on/off if hardware available.
-
-    Args:
-        on (bool): Desired state.
-    """
+    """Turn LED on/off (if hardware available) and update device state."""
     _motor_device = find_motorvarmare()
     if _motor_led is None or _motor_device is None:
         return
@@ -60,12 +46,7 @@ def find_motorvarmare():
     return None
 
 def draw_device_icons(draw, pos):
-    """Draw a vertical list of device icons.
-
-    Args:
-        draw: PIL ImageDraw instance (shared composition buffer)
-        pos: (x, y) top-left anchor for the list
-    """
+    """Draw vertical list of device icons at anchor `pos` (x, y)."""
     box_padding = 4
     box_height = icon_size + box_padding * 2
 
@@ -78,16 +59,7 @@ def draw_device_icons(draw, pos):
         icon_y_offset += box_height
 
 def get_devices_region(padding, full_height):
-    """Return a cropped devices column image and its bbox within the full panel.
-
-    Args:
-        padding (int): Outer panel padding.
-        full_height (int): Total panel height.
-
-    Returns:
-        (PIL.Image, tuple): (region_img, bbox)
-            bbox format: (x1, y1, x2, y2)
-    """
+    """Return (region_image, bbox) for devices column given panel padding/height."""
     devices_width = icon_size * 2  # conservative 2-column width
     bbox = (padding, padding, padding + devices_width, full_height - padding)
     region_img_height = full_height - 2 * padding
@@ -98,7 +70,7 @@ def get_devices_region(padding, full_height):
 
 
 def update_device_by_topic(topic, on):
-    """Update device state matching a given MQTT topic. Returns device or None."""
+    """Update state for device matching MQTT `topic`; return device dict or None."""
     for d in DEVICES:
         on_bool = bool(on)
         if d.get("topic") == topic and d.get("on") != on_bool:
@@ -110,7 +82,7 @@ def update_device_by_topic(topic, on):
     return None
 
 __all__ = [
-    "find_motorvarmare"
+    "find_motorvarmare",
     "draw_device_icons",
     "update_device_by_topic",
     "DEVICES",

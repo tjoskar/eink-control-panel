@@ -1,19 +1,11 @@
-"""Panel composition module.
+"""Single source for panel layout (devices, weather, electricity, dishes, garbage).
 
-Single source for laying out all sections (devices, weather, electricity,
-dishes, garbage). Both file-output (`to_image.py`) and hardware display
-(`to_display.py`) should call `compose_panel()` to avoid drift.
+Both PNG generation (`to_image.py`) and hardware display (`to_display.py`) must
+use `compose_panel()` so the layout stays in sync.
 
-Usage:
-    from compose import compose_panel
-    img = compose_panel()
-    img.save("main.png")            # for image output
-    epd.display(epd.getbuffer(img))  # for hardware
-
-Notes:
-- Keeps width/height/padding constants here to avoid magic numbers scattered.
-- Devices list is passed in so external events (MQTT) can modify state.
-- All drawing functions mutate a shared ImageDraw instance.
+Keep layout constants (WIDTH/HEIGHT/PADDING) here to avoid magic numbers.
+Each draw_* function receives a shared ImageDraw instance and top‑left anchor.
+Sections are resilient: failures are caught and logged.
 """
 
 from PIL import Image, ImageDraw
@@ -29,10 +21,7 @@ WIDTH, HEIGHT = 800, 480
 PADDING = 16
 
 def _safe(func: Callable, label: str, *args, **kwargs):
-    """Execute a drawing function safely, logging any exception and continuing.
-
-    Keeps composition resilient so a failing section doesn't break the whole panel.
-    """
+    """Execute a drawing function; log and continue on any error."""
     try:
         func(*args, **kwargs)
     except Exception as e:  # noqa: BLE001 (broad ok: we want to catch all rendering issues)
@@ -40,11 +29,7 @@ def _safe(func: Callable, label: str, *args, **kwargs):
 
 
 def compose_panel():
-    """Create and return a fully rendered PIL Image.
-
-    Returns:
-        PIL.Image: Rendered grayscale image ready for saving or display.
-    """
+    """Return a fully rendered grayscale PIL Image ready for saving or display."""
     image = Image.new("L", (WIDTH, HEIGHT), 255)
     draw = ImageDraw.Draw(image)
 
@@ -63,7 +48,7 @@ def compose_panel():
     # Garbage collection (below electricity charts)
     _safe(draw_garbage_collection, "garbage", draw, (PADDING + 500, PADDING + 280))
 
-    # Last updated timestamp (bottom-right corner, subtle)
+    # Last updated timestamp (bottom-right corner)
     _safe(draw_last_update, "last_update", draw, (WIDTH - PADDING, HEIGHT - PADDING))
 
     return image

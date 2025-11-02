@@ -1,16 +1,6 @@
-"""Development runner: generates PNG image, listens for MQTT events, and
-periodically refreshes the dashboard.
+"""Development runner: PNG mode + MQTT updates + periodic refresh.
 
-Future extension: add physical button event handling (thread placeholder).
-
-Responsibilities:
-- Initial render to main.png
-- Subscribe to topics (statechange/washing_machine)
-- On message: update device state + re-render
-- Periodic full refresh every REFRESH_INTERVAL seconds
-
-Keeps threading simple: one MQTT network loop (loop_start) + one refresh
-thread + optional future button thread.
+Simplified threading: MQTT loop + hourly refresh thread (placeholder for future buttons).
 """
 
 import time
@@ -18,6 +8,21 @@ import sys
 import threading
 import signal
 import paho.mqtt.client as mqtt
+
+# Attempt hardware import; fallback to mock for non-RPi dev environments.
+try:  # pragma: no cover - import guard
+    from lib.waveshare_epd.epd7in5_V2 import EPD  # type: ignore
+except Exception:  # noqa: BLE001
+    class EPD:  # minimal mock matching methods used by DisplayController
+        width = 800
+        height = 480
+        def init(self): pass
+        def init_fast(self): pass
+        def Clear(self): pass
+        def display(self, buf): pass
+        def sleep(self): pass
+        def getbuffer(self, image): return image
+    print("[MOCK] Using mock EPD (hardware not available)")
 
 from config import (
     MQTT_DEVICE_TOPICS,
@@ -27,13 +32,12 @@ from config import (
     MQTT_PASSWORD,
     MQTT_TOPIC_PREFIX,
 )
-from devices import update_device_by_topic, get_devices_region
-from compose import PADDING, HEIGHT
+from devices import update_device_by_topic
 from display_controller import DisplayController
 
 
 def button_listener(controller: DisplayController):
-    # Placeholder for GPIO integration
+    # Placeholder (no GPIO in dev mode)
     while not controller.stopped:
         time.sleep(2)
 
@@ -82,7 +86,7 @@ def main():
 
     client.loop_start()
 
-    # Periodic full refresh thread (hourly or configured interval)
+    # Periodic full refresh (fixed 1h; could use REFRESH_INTERVAL)
     stop_event = threading.Event()
     def refresh_loop():
         while not stop_event.is_set():
@@ -93,7 +97,7 @@ def main():
     threading.Thread(target=refresh_loop, daemon=True).start()
     # threading.Thread(target=button_listener, args=(controller,), daemon=True).start()
 
-    # Unified shutdown routine so signals and exceptions reuse logic
+    # Unified shutdown routine
     def shutdown(reason: str):
         print(f"\n[SHUTDOWN] {reason}...")
         stop_event.set()
@@ -108,7 +112,7 @@ def main():
             pass
         print("[SHUTDOWN] Done")
 
-    # Signal handlers (SIGINT = Ctrl+C, SIGTERM = kill default). SIGKILL cannot be caught.
+    # Signal handlers (SIGINT, SIGTERM)
     def handle_signal(signum, frame):
         name = {signal.SIGINT: "SIGINT", signal.SIGTERM: "SIGTERM"}.get(signum, str(signum))
         shutdown(f"Received {name}")

@@ -1,17 +1,14 @@
-"""
-Display runner: orchestrates MQTT + periodic refresh and delegates all
-hardware rendering logic to `DisplayController` (see display_controller.py).
-
-Structure mirrors run_dev.py but uses the hardware pipeline.
-Future extension: add physical button listener thread.
-"""
+"""Hardware display runner: MQTT + periodic refresh + button toggle."""
 
 import time
 import sys
 import threading
 import signal
 import paho.mqtt.client as mqtt
-from gpiozero import Button
+try:  # pragma: no cover - import guard
+    from gpiozero import Button  # type: ignore
+except Exception:  # noqa: BLE001
+    Button = None  # type: ignore
 
 from config import (
     MQTT_DEVICE_TOPICS,
@@ -21,8 +18,7 @@ from config import (
     MQTT_PASSWORD,
     MQTT_TOPIC_PREFIX,
 )
-from devices import update_device_by_topic, get_devices_region, find_motorvarmare, set_motorvarmare, DEVICES
-from compose import PADDING, HEIGHT
+from devices import update_device_by_topic, find_motorvarmare, set_motorvarmare
 from display_controller import DisplayController
 from lib.waveshare_epd.epd7in5_V2 import EPD
 
@@ -51,7 +47,7 @@ def button_listener(controller: DisplayController, client: mqtt.Client):
             controller.show_dialog("Motorvärmaren har startats")
 
     button.when_pressed = handle_press
-    print("[BUTTON] Listener started (GPIO21), LED on GPIO2")
+    print("[BUTTON] Listener started (GPIO21)")
     while not controller.stopped:
         time.sleep(0.2)
     # Cleanup implicit: gpiozero devices auto close on GC.
@@ -102,7 +98,7 @@ def main():
 
     client.loop_start()
 
-    # Periodic full refresh thread (hourly or configured interval)
+    # Periodic full refresh (fixed 1h)
     stop_event = threading.Event()
     def refresh_loop():
         while not stop_event.is_set():
@@ -113,7 +109,7 @@ def main():
     threading.Thread(target=refresh_loop, daemon=True).start()
     threading.Thread(target=button_listener, args=(controller, client), daemon=True).start()
 
-    # Unified shutdown routine so signals and exceptions reuse logic
+    # Unified shutdown routine
     def shutdown(reason: str):
         print(f"\n[SHUTDOWN] {reason}...")
         stop_event.set()
@@ -128,7 +124,7 @@ def main():
             pass
         print("[SHUTDOWN] Done")
 
-    # Signal handlers (SIGINT = Ctrl+C, SIGTERM = kill default). SIGKILL cannot be caught.
+    # Signal handlers (SIGINT, SIGTERM)
     def handle_signal(signum, frame):
         name = {signal.SIGINT: "SIGINT", signal.SIGTERM: "SIGTERM"}.get(signum, str(signum))
         shutdown(f"Received {name}")

@@ -1,23 +1,10 @@
-"""DisplayController encapsulates E-Ink hardware rendering logic.
+"""DisplayController: encapsulates E-Ink rendering (full render + debounced scheduling + dialogs).
 
-Responsibilities:
-- Full-screen render (compose + display).
-- Debounced full render scheduling.
-- Partial region update (caller supplies Image + bbox).
-
-Note: Keep this lean; Pi Zero W has limited resources.
-
-EPD instance is injected so callers can:
-- Provide a mock for local preview/testing without SPI.
-- Reuse a single hardware instance across different orchestration layers.
-- Preconfigure hardware (pins, init variants) before controller usage.
+Keep lean for Pi Zero W; EPD driver instance injected for easier testing/mocking.
 """
 
 import threading
 import time
-from typing import Optional, Tuple
-from PIL import Image, ImageDraw
-from gui_constant import text_font, colors
 from dialog import build_dialog_image
 from config import MQTT_RENDER_DEBOUNCE_SECONDS
 from compose import compose_panel
@@ -27,12 +14,7 @@ from lib.waveshare_epd.epd7in5_V2 import EPD
 class DisplayController:
 
     def __init__(self, epd: EPD):
-        """Create a controller bound to a provided EPD instance.
-
-        Injecting the hardware driver simplifies testing (can pass a mock)
-        and allows caller to manage lifecycle (e.g. reuse one EPD across
-        different controllers or pre-configure pins).
-        """
+        """Bind controller to provided EPD instance (can be a mock)."""
         # Core hardware driver (Waveshare EPD instance) provided by caller
         self._epd = epd
         # Mutex guarding any interaction with the panel (full + partial renders)
@@ -59,7 +41,7 @@ class DisplayController:
 
     # ---- Rendering ----
     def render(self):
-        """Full panel render: init -> display -> sleep."""
+        """Full panel render (slow init + optional clear)."""
         with self._render_lock:
             # Every 10th render: do a clear after init to reduce ghosting
             self._epd.init()
@@ -78,7 +60,7 @@ class DisplayController:
             print(f"[RENDER] Full update done (count={self._render_count}, clear={do_clear}, compose={dt_ms:.1f}ms)")
 
     def fast_render(self):
-        """Full panel render: init -> display -> sleep."""
+        """Full panel render using fast init (no clear)."""
         with self._render_lock:
             self._epd.init_fast()
             t0 = time.perf_counter()
@@ -92,7 +74,7 @@ class DisplayController:
             print(f"[RENDER-FAST] Full update done (count={self._render_count}, compose={dt_ms:.1f}ms)")
 
     def schedule_render(self):
-        """Debounce display rendering to batch rapid retained messages."""
+        """Debounced full render (cancels previous timer)."""
         if self._render_timer is not None:
             self._render_timer.cancel()
 
