@@ -70,7 +70,6 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     topic = msg.topic
     payload = msg.payload.decode("utf-8").strip().lower()
-    print(f"[MQTT] {topic} => {payload}")
 
     if topic in MQTT_DEVICE_TOPICS and payload in {"on", "off"}:
         updated = update_device_by_topic(topic, payload == "on")
