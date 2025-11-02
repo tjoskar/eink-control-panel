@@ -7,9 +7,14 @@ import urllib.error
 from gui_constant import colors, text_font
 from config import TIBBER_TOKEN
 
-# Cache settings (TTL 5h)
+# Cache settings
+# Dynamic behavior:
+#  - Between 13:00 and 15:00 (local time) new prices for next day are published.
+#    Use a short TTL (5 minutes) to refetch frequently so we pick up the update soon after release.
+#  - Outside that window, keep and reuse whatever we have (yesterday's fetch contains today's prices
+#    in the 'tomorrow' array; after 15:00 it also contains tomorrow's prices). Age is ignored.
 ELECTRICITY_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "electricity_cache.json")
-ELECTRICITY_CACHE_TTL = 18000  # 5 hours in seconds
+ELECTRICITY_SHORT_WINDOW_TTL = 300  # 5 minutes (13-15 window)
 
 # GraphQL query (price info + last 7 days consumption)
 TIBBER_QUERY = """
@@ -25,15 +30,36 @@ LEVEL_LABEL_SV = {
 
 
 def _load_electricity_cache():
+    """Return cached data subject to dynamic time-window logic.
+
+    Between 13:00 and 15:00 (local time) enforce a short TTL (5 minutes).
+    Outside that window, if a cache file exists return its data regardless of age.
+    This matches Tibber day-ahead price publication timing (released sometime 13-15).
+    """
     try:
-        if os.path.exists(ELECTRICITY_CACHE_FILE):
-            with open(ELECTRICITY_CACHE_FILE, 'r') as f:
-                cache = json.load(f)
-            if time.time() - cache.get('timestamp', 0) < ELECTRICITY_CACHE_TTL:
-                return cache.get('data')
+        if not os.path.exists(ELECTRICITY_CACHE_FILE):
+            return None
+        with open(ELECTRICITY_CACHE_FILE, 'r') as f:
+            cache = json.load(f)
+        data = cache.get('data')
+        if data is None:
+            return None
+
+        now_hour = time.localtime().tm_hour  # rely on system timezone (should be Europe/Stockholm on Pi)
+        cache_age = time.time() - cache.get('timestamp', 0)
+
+        # Short refresh window: 13:00 <= time < 15:00
+        if 13 <= now_hour < 15:
+            if cache_age < ELECTRICITY_SHORT_WINDOW_TTL:
+                return data
+            else:
+                return None  # force refetch inside the short window
+        else:
+            # Outside publication window reuse any age
+            return data
     except Exception as e:
         print(f"Error reading electricity cache: {e}")
-    return None
+        return None
 
 def _save_electricity_cache(data):
     try:
