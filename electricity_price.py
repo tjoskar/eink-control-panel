@@ -15,6 +15,7 @@ from config import TIBBER_TOKEN
 #    in the 'tomorrow' array; after 15:00 it also contains tomorrow's prices). Age is ignored.
 ELECTRICITY_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "electricity_cache.json")
 ELECTRICITY_SHORT_WINDOW_TTL = 300  # 5 minutes (13-15 window)
+ELECTRICITY_MAX_AGE = 86400  # 24h hard expiry; always refetch if older
 
 # GraphQL query (price info + last 7 days consumption)
 TIBBER_QUERY = """
@@ -48,15 +49,18 @@ def _load_electricity_cache():
         now_hour = time.localtime().tm_hour  # rely on system timezone (should be Europe/Stockholm on Pi)
         cache_age = time.time() - cache.get('timestamp', 0)
 
+        # Hard age cap: if older than 24h force refresh regardless of window
+        if cache_age > ELECTRICITY_MAX_AGE:
+            return None
+
         # Short refresh window: 13:00 <= time < 15:00
         if 13 <= now_hour < 15:
             if cache_age < ELECTRICITY_SHORT_WINDOW_TTL:
                 return data
-            else:
-                return None  # force refetch inside the short window
-        else:
-            # Outside publication window reuse any age
-            return data
+            return None  # force refetch inside the short window when stale (>5m)
+
+        # Outside publication window reuse any age (up to MAX_AGE)
+        return data
     except Exception as e:
         print(f"Error reading electricity cache: {e}")
         return None

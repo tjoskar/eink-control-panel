@@ -59,56 +59,64 @@ Run (after activating the virtual environment):
 python mqtt_debug.py
 ```
 
-Optional overrides:
-
-```
-MQTT_HOST=192.168.1.10 MQTT_PORT=1883 MQTT_TOPIC_PREFIX=statechange python mqtt_debug.py
-```
-
-Sample output line:
-
-```
-[2025-10-26 12:34:56] TOPIC=statechange/washing_machine QOS=0 RETAIN=0 PAYLOAD=True <DEVICE label='Tvättmaskin' state=ON>
-```
-
-Boolean-like payloads (on/off/true/false/1/0) and JSON are auto-interpreted for
-readability.
-
-### Render Debounce
-
-To avoid a burst of renders when many retained messages arrive immediately after
-connecting to MQTT, rendering is debounced:
-
-- `MQTT_RENDER_DEBOUNCE_SECONDS` (default 3) batches rapid device state changes
-  so only one redraw happens after the last message in the burst.
-- Applies to both `run_dev.py` (PNG mode) and `run_display.py` (E-Ink mode).
-- On shutdown any pending debounced render is flushed so the final state is
-  saved/displayed.
-
-## Weather API Integration
-
-The weather display uses OpenWeatherMap's One Call API 3.0. To use:
-
-1. Sign up for an API key at
-   [OpenWeatherMap](https://home.openweathermap.org/users/sign_up)
-2. Update `config.py` with your API key and location coordinates
-3. The weather data is cached for 1 hour to minimize API calls
-
-API data is automatically fetched when the display updates, providing:
-
-- Current temperature and weather condition
-- Wind speed
-- Sunrise and sunset times
-- Precipitation data
-- UV index with forecast for high UV periods
-- 5-day weather forecast
-
 ## Running on eink display
 
 ### Setup
 
+```
+mkdir ~/control-panel
+cd ~/control-panel
+python3 -m venv venv
+source venv/bin/activate
+pip install --system-site-packages -r requirements.txt
+```
+
+Create a systemd file:
+
+```
+sudo nano /etc/systemd/system/eink-display.service
+```
+
+```
+[Unit]
+Description=Control Panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=<your user>
+WorkingDirectory=/home/<your user>/control-panel
+
+# Run Python from your virtual environment
+ExecStart=/home/<your user>/control-panel/venv/bin/python /home/<your user>/control-panel/run_display.py
+
+Restart=always
+RestartSec=30
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+sudo systemctl daemon-reload
+sudo systemctl enable eink-display.service
+sudo systemctl start eink-display.service
+```
+
+Check the logs:
+
+```
+sudo systemctl status eink-display.service
+sudo journalctl -u eink-display.service -f
+```
+
 ### Deployment
 
 ```
+# So I remember, replace the host and user
 rsync -av --exclude-from='.rsyncignore' . tjoskar@nasse:/home/tjoskar/control-panel
 ```
