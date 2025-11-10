@@ -39,8 +39,8 @@ WEATHER_ICONS = {
     "11d": "\ue80f",  # Thunderstorm
     "11n": "\ue80f",
     # Snow
-    "13d": "\ue80c",  # Snow
-    "13n": "\ue80c",
+    "13d": "\ue2cd",  # Snow
+    "13n": "\ue2cd",
     # Mist/fog
     "50d": "\ue8e7",  # Mist
     "50n": "\ue8e7"
