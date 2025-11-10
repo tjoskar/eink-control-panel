@@ -26,9 +26,6 @@ Then generate the image once to verify everything works:
 python to-image.py
 ```
 
-Run `main.py` when deploying on the Raspberry Pi to update the display on an
-interval.
-
 ## Icons
 
 Material icons can be found here: https://fonts.google.com/icons
@@ -45,15 +42,6 @@ Run the following command to automatically rebuild the image when code changes:
 
 Use `mqtt_debug.py` to inspect MQTT traffic. It highlights device topics defined
 in `config.py`.
-
-Filtering:
-
-- `MQTT_TOPIC_PREFIX` (in `config.py`) defaults to `statechange` and makes the
-  debug script subscribe to `statechange/#` instead of all topics (`#`).
-- Set `MQTT_TOPIC_PREFIX = None` (or export env var `MQTT_TOPIC_PREFIX=`) to see
-  everything.
-
-Run (after activating the virtual environment):
 
 ```
 python mqtt_debug.py
@@ -117,6 +105,6 @@ sudo journalctl -u eink-display.service -f
 ### Deployment
 
 ```
-# So I remember, replace the host and user
+# Replace the host and user
 rsync -av --exclude-from='.rsyncignore' . tjoskar@nasse:/home/tjoskar/control-panel
 ```
