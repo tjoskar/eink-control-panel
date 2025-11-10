@@ -183,6 +183,39 @@ def get_uv_info(weather_data):
 
     return uv_text
 
+def get_rain_total(weather_data):
+    """Return total predicted rain (mm) for the remaining hours of the current day.
+
+    Logic mirrors get_uv_info's same-day filtering:
+    - Uses hourly array if present.
+    - Sums each hour's rain['1h'] where the hour is on the current date and >= current time.
+    - Falls back to current hour's rain if hourly data missing.
+    """
+    current = weather_data.get('current', {})
+    current_time = datetime.fromtimestamp(current.get('dt', time.time()))
+    current_date = current_time.date()
+
+    hourly = weather_data.get('hourly', [])
+    if not hourly:
+        return current.get('rain', {}).get('1h', 0) if current.get('rain') else 0
+
+    total = 0.0
+    for hour in hourly:
+        hour_dt = datetime.fromtimestamp(hour.get('dt', 0))
+        if hour_dt.date() != current_date:
+            # stop when day changes (hourly is chronological); optional optimization
+            continue
+        if hour_dt < current_time:
+            # skip past hours (in case API returns earlier hours including history)
+            continue
+        rain_amount = hour.get('rain', {}).get('1h', 0) if hour.get('rain') else 0
+        try:
+            # Ensure numeric (API sometimes returns dict values already numeric)
+            total += float(rain_amount)
+        except (TypeError, ValueError):
+            pass
+    return total
+
 def get_weather_display_data():
     """Transform raw weather data into display dict used by renderer."""
     try:
@@ -199,8 +232,8 @@ def get_weather_display_data():
         sunset_time = datetime.fromtimestamp(current.get('sunset', 0))
         sun_times = f"{sunrise_time.strftime('%H:%M')} / {sunset_time.strftime('%H:%M')}"
 
-        # Precipitation data
-        rain_1h = current.get('rain', {}).get('1h', 0) if current.get('rain') else 0
+        # Precipitation data (sum remaining hours today)
+        rain_total = get_rain_total(weather_data)
 
         # UV index information
         uv_info = get_uv_info(weather_data)
@@ -212,7 +245,10 @@ def get_weather_display_data():
             day_name = DAYS_OF_WEEK_SV.get(day_dt.weekday(), "")
 
             day_icon_code = day.get('weather', [{}])[0].get('icon', '01d')
-            day_icon = WEATHER_ICONS.get(day_icon_code, "\ue818")  # Default to cloudy if icon not found
+            day_icon = WEATHER_ICONS.get(day_icon_code)
+            if not day_icon:
+                print(f"Could not found icon for code: {day_icon_code}")
+                day_icon = "\uf04c"  # Fallback to ? if mapping fails
 
             temp_min = day.get('temp', {}).get('min', 0)
             temp_max = day.get('temp', {}).get('max', 0)
@@ -230,7 +266,7 @@ def get_weather_display_data():
                 "icon": WEATHER_ICONS.get(weather_icon, "\ue818"),
                 "wind_speed": f"{wind_speed:.0f} m/s",
                 "sun_times": sun_times,
-                "rain": f"{rain_1h:.1f} mm",
+                "rain": f"{rain_total:.1f} mm",
                 "uv_info": uv_info
             },
             "forecast": forecast
