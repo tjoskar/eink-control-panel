@@ -8,12 +8,11 @@ import time
 from dialog import build_dialog_image
 from config import MQTT_RENDER_DEBOUNCE_SECONDS
 from compose import compose_panel
-from lib.waveshare_epd.epd7in5_V2 import EPD
 
 
 class DisplayController:
 
-    def __init__(self, epd: EPD):
+    def __init__(self, epd):
         """Bind controller to provided EPD instance (can be a mock)."""
         # Core hardware driver (Waveshare EPD instance) provided by caller
         self._epd = epd
