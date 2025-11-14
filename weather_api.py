@@ -21,7 +21,7 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weather_c
 WEATHER_ICONS = {
     # Clear
     "01d": "\uf157",  # Clear day
-    "01n": "\ue386",  # Clear night
+    "01n": "\uef44",  # Clear night
     # Partly cloudy
     "02d": "\ue81a",  # Few clouds day
     "02n": "\ue391",  # Few clouds night
@@ -263,7 +263,7 @@ def get_weather_display_data():
         return {
             "current": {
                 "temp": f"{temp:.0f}°",
-                "icon": WEATHER_ICONS.get(weather_icon, "\ue818"),
+                "icon": WEATHER_ICONS.get(weather_icon, "\uf04c"),
                 "wind_speed": f"{wind_speed:.0f} m/s",
                 "sun_times": sun_times,
                 "rain": f"{rain_total:.1f} mm",
