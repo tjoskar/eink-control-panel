@@ -1,5 +1,7 @@
 # Home Control Panel (E-Ink)
 
+Read this post for more details: https://tjoskar.dev/posts/2025-04-25-eink-pi/
+
 A dashboard for displaying various information on an E-Ink display, designed for
 a Raspberry Pi Zero W.
 
