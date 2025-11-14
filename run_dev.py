@@ -9,20 +9,15 @@ import threading
 import signal
 import paho.mqtt.client as mqtt
 
-# Attempt hardware import; fallback to mock for non-RPi dev environments.
-try:  # pragma: no cover - import guard
-    from lib.waveshare_epd.epd7in5_V2 import EPD  # type: ignore
-except Exception:  # noqa: BLE001
-    class EPD:  # minimal mock matching methods used by DisplayController
-        width = 800
-        height = 480
-        def init(self): pass
-        def init_fast(self): pass
-        def Clear(self): pass
-        def display(self, buf): pass
-        def sleep(self): pass
-        def getbuffer(self, image): return image
-    print("[MOCK] Using mock EPD (hardware not available)")
+class EPD:  # minimal mock matching methods used by DisplayController
+    width = 800
+    height = 480
+    def init(self): pass
+    def init_fast(self): pass
+    def Clear(self): pass
+    def display(self, buf): buf.save("main.png")
+    def sleep(self): pass
+    def getbuffer(self, image): return image
 
 from config import (
     MQTT_DEVICE_TOPICS,
