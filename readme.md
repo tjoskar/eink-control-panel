@@ -107,4 +107,5 @@ sudo journalctl -u eink-display.service -f
 ```
 # Replace the host and user
 rsync -av --exclude-from='.rsyncignore' . tjoskar@nasse:/home/tjoskar/control-panel
+sudo systemctl restart control-panel.service
 ```
