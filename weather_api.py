@@ -26,10 +26,10 @@ WEATHER_ICONS = {
     "02d": "\ue81a",  # Few clouds day
     "02n": "\ue391",  # Few clouds night
     # Cloudy
-    "03d": "\ue818",  # Scattered clouds
-    "03n": "\ue818",
-    "04d": "\ue818",  # Broken clouds
-    "04n": "\ue818",
+    "03d": "\uf172",  # Scattered clouds
+    "03n": "\uf174",
+    "04d": "\uf172",  # Broken clouds
+    "04n": "\uf174",
     # Rain
     "09d": "\uf61f",  # Shower rain
     "09n": "\uf61f",
@@ -43,7 +43,7 @@ WEATHER_ICONS = {
     "13n": "\ue2cd",
     # Mist/fog
     "50d": "\ue8e7",  # Mist
-    "50n": "\ue8e7"
+    "50n": "\ue818"
 }
 
 # Weekday abbreviations (Swedish)
